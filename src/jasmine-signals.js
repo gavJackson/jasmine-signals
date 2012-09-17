@@ -24,6 +24,18 @@
 			if (!(this.actual instanceof jasmine.signals.SignalSpy)) {
 				throw new Error('Expected a SignalSpy');
 			}
+
+            this.message = function() {
+                var message = "Expected " + this.actual.signal.toString() + " to have been dispatched";
+                if (expectedCount > 0)
+                    message += " (" + expectedCount + " times but was " + this.actual.count + ")";
+
+                if(this.actual.matchingValuesMessage != "")
+                    message += " with " + this.actual.paramCount + " params: "  +this.actual.matchingValuesMessage + "";
+
+                return message;
+            };
+
 			if (expectedCount === undefined) {
 				return this.actual.count > 0;
 			} else {
@@ -44,7 +56,9 @@
 			this.signal = signal;
 			this.matcher = matcher || allSignalsMatcher;
 			this.count = 0;
-			this.initialize();
+            this.matchingValuesMessage = "";
+            this.paramCount = 0
+            this.initialize();
 		};
 
 		function allSignalsMatcher() {
@@ -55,13 +69,10 @@
 			this.signal.add(onSignal, this);
 
 			function onSignal(parameters) {
-                //fixes bug which prevented matching on multiple parameters
                 if (this.matcher.apply(this, [].splice.call(arguments, 0))){
 					this.count++;
 				}
-			}
-
-			;
+			};
 		};
 
 		namespace.SignalSpy.prototype.reset = function () {
@@ -75,11 +86,22 @@
 
 		namespace.SignalSpy.prototype.matchingValues = function () {
 			var expectedArgs = arguments;
+
 			this.matcher = function () {
-				for (var i = 0; i < expectedArgs.length; i++) {
+                if(this.matchingValuesMessage != "")
+                    this.matchingValuesMessage += ", ";
+
+                this.paramCount = expectedArgs.length;
+
+                for (var i = 0; i < expectedArgs.length; i++) {
 					if (arguments[i] !== expectedArgs[i]) {
+                        this.matchingValuesMessage += "(expected `" + expectedArgs[i] + "` but was `" + arguments[i] + "`)";
 						return false;
 					}
+                    else{
+                        this.matchingValuesMessage += "(`" + expectedArgs[i] + "` was `" + arguments[i] + "`)";
+
+                    }
 				}
 				return true;
 			};
